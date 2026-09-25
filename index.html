@@ -25,10 +25,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',san
 .sync-status.on{color:#1D9E75}
 
 /* 하단 탭 */
+.nav-item{flex:1;padding:9px 1px 11px;border:none;background:none;font-size:10px;color:#999;cursor:pointer;text-align:center}
+.nav-icon{font-size:18px;display:block;margin-bottom:2px}
+/* ===== 빠른 출고 ===== */
+.out-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #f2f2f2;gap:10px}
+.out-row:last-child{border-bottom:none}
+.out-name{font-size:15px;font-weight:700;color:#222}
+.out-sub{font-size:11px;color:#aaa;margin-top:1px}
+.out-stock{min-width:52px;text-align:center;font-size:13px;font-weight:800;color:#0F6E56}
+.out-stock.low{color:#9a6700}
+.out-stock.zero{color:#b02a2a}
+.btn-minus{width:64px;height:48px;border:none;border-radius:12px;background:#b23c17;color:#fff;font-size:19px;font-weight:800;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.btn-minus:active{background:#8d2e11;transform:scale(.94)}
+.btn-minus:disabled{background:#e8e8e8;color:#bbb}
+.out-fav{background:#fff8ec;border:1.5px solid #f0d9a8}
+.undo-bar{position:sticky;top:0;z-index:20;background:#fff;border:1.5px solid #e5e5e5;border-radius:12px;padding:8px 10px;margin-bottom:10px;display:none;align-items:center;justify-content:space-between;gap:8px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.undo-bar b{font-size:13px}
+.btn-undo{border:1.5px solid #ddd;background:#fff;border-radius:9px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+.out-total{background:#1f2937;color:#fff;border-radius:12px;padding:11px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.out-total b{font-size:20px}
+/* ===== 재고 맞추기 ===== */
+.cnt-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #f2f2f2;gap:8px}
+.cnt-row.diff{background:#fdeee8}
+.cnt-in{width:66px;height:40px;border:1.5px solid #ddd;border-radius:9px;text-align:center;font-size:16px;font-weight:700;flex-shrink:0}
+.cnt-in:focus{border-color:#2563eb;outline:none}
+.cnt-gap{min-width:56px;text-align:right;font-size:12px;font-weight:800;color:#b02a2a}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e5e5;display:flex;z-index:100;max-width:480px;margin:0 auto}
-.nav-item{flex:1;padding:10px 2px 12px;border:none;background:none;font-size:11px;color:#999;cursor:pointer;text-align:center}
 .nav-item.active{color:#2563eb;font-weight:600}
-.nav-icon{font-size:20px;display:block;margin-bottom:2px}
 
 .screen{display:none;padding:12px}
 .screen.active{display:block}
@@ -117,7 +140,18 @@ label{display:block;font-size:13px;color:#666;margin-bottom:5px;font-weight:500}
   </div>
 
   <!-- ══════ 스캔 (홈) ══════ -->
-  <div id="s-scan" class="screen active">
+  <div id="s-out" class="screen active">
+    <div class="out-total"><span>오늘 출고</span><span><b id="out-today">0</b> 개</span></div>
+    <div class="undo-bar" id="undo-bar">
+      <div><b id="undo-info"></b></div>
+      <button class="btn-undo" onclick="undoOut()">되돌리기</button>
+    </div>
+    <div class="search-box"><input type="text" id="out-search" placeholder="🔍 상품 찾기" oninput="renderOut()"></div>
+    <div id="out-list"></div>
+    <div class="empty" id="out-empty">등록된 상품이 없습니다.<br>등록 탭에서 추가해주세요.</div>
+  </div>
+
+  <div id="s-scan" class="screen">
     <div class="mode-toggle">
       <button class="mode-btn" id="mode-in" onclick="setMode('in')">▲ 입고<span class="sub">물건 들어올 때</span></button>
       <button class="mode-btn" id="mode-out" onclick="setMode('out')">▼ 출고<span class="sub">물건 나갈 때</span></button>
@@ -162,6 +196,7 @@ label{display:block;font-size:13px;color:#666;margin-bottom:5px;font-weight:500}
       <div class="sum-chip"><div class="n" id="sum-low" style="color:#9a6700">0</div><div class="t">부족</div></div>
       <div class="sum-chip"><div class="n" id="sum-zero" style="color:#b02a2a">0</div><div class="t">없음</div></div>
     </div>
+    <button class="btn" onclick="go('count',null)" style="margin-bottom:10px">📋 재고 맞추기 (실사)</button>
     <div class="search-box"><input type="text" id="search" placeholder="🔍 상품명·바코드 검색 (상품을 누르면 수정)" oninput="renderStock()"></div>
     <div id="stock-list"></div>
     <div class="empty" id="stock-empty">등록된 상품이 없습니다.<br>등록 탭에서 추가해주세요.</div>
@@ -248,6 +283,14 @@ label{display:block;font-size:13px;color:#666;margin-bottom:5px;font-weight:500}
   </div>
 
   <!-- ══════ 관리 ══════ -->
+  <div id="s-count" class="screen">
+    <button class="btn" onclick="go('stock',null);document.querySelectorAll('.nav-item')[2].classList.add('active')" style="margin-bottom:10px">← 재고로 돌아가기</button>
+    <div class="out-total" style="background:#2563eb"><span>실제 개수를 세어 적으세요</span><span><b id="cnt-diff">0</b> 개 차이</span></div>
+    <div id="count-list"></div>
+    <button class="btn btn-blue" onclick="applyCount()" style="margin-top:12px">차이 반영하기</button>
+    <div style="font-size:12px;color:#999;text-align:center;margin-top:8px">비워둔 칸은 건드리지 않습니다.</div>
+  </div>
+
   <div id="s-manage" class="screen">
     <div class="card">
       <label style="font-weight:700;margin-bottom:10px">구글 시트 연동</label>
@@ -275,7 +318,8 @@ label{display:block;font-size:13px;color:#666;margin-bottom:5px;font-weight:500}
 
 <!-- 하단 탭 -->
 <div class="bottom-nav">
-  <button class="nav-item active" onclick="go('scan',this)"><span class="nav-icon">📷</span>스캔</button>
+  <button class="nav-item active" onclick="go('out',this)"><span class="nav-icon">▼</span>출고</button>
+  <button class="nav-item" onclick="go('scan',this)"><span class="nav-icon">📷</span>스캔</button>
   <button class="nav-item" onclick="go('stock',this)"><span class="nav-icon">📦</span>재고</button>
   <button class="nav-item" onclick="go('reg',this)"><span class="nav-icon">＋</span>등록</button>
   <button class="nav-item" onclick="go('label',this)"><span class="nav-icon">🏷</span>라벨</button>
@@ -360,12 +404,15 @@ function go(name,btn){
   $('s-'+name).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
+  if(name==='out')renderOut();
+  if(name==='count')renderCount();
   if(name==='stock')renderStock();
   if(name==='reg')renderReg();
   if(name==='label')renderLabel();
   if(name==='hist')renderHist(true);
   if(name==='manage')renderManage();
   if(name!=='scan'&&camOn)stopCam();
+  if(name==='count'){document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));}
 }
 
 /* ═══════════ 스캔 ═══════════ */
@@ -461,6 +508,160 @@ function undoLast(){
   $('last-action').style.display='none';
   if(GURL)sendLog(entry);
   lastTx=null;
+}
+
+
+/* ═══════════ 빠른 출고 (탭만으로 재고 차감) ═══════════ */
+let outUndo=[];   // [{code,qty,logTime}]
+function todayKey(){return new Date().toLocaleDateString('ko-KR');}
+function outTodayCount(){
+  const t=todayKey();
+  return L.filter(l=>l.type==='출고'&&l.time.startsWith(t)).reduce((s,l)=>s+l.qty,0);
+}
+function favCodes(){
+  // 최근 출고 기록 400건 기준으로 많이 나간 순 상위 6개 (날짜 파싱 없이 안전하게)
+  const c={};
+  let n=0;
+  for(const l of L){
+    if(l.type!=='출고')continue;
+    c[l.code]=(c[l.code]||0)+l.qty;
+    if(++n>=400)break;
+  }
+  return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,6).map(x=>x[0]);
+}
+function outRow(p,fav){
+  let cls='out-stock',txt=p.stock+'개';
+  if(p.stock===0){cls+=' zero';txt='없음';}
+  else if(p.stock<=p.minStock)cls+=' low';
+  return`<div class="out-row${fav?' out-fav':''}" data-code="${p.code}">
+    <div style="min-width:0;flex:1">
+      <div class="out-name">${fav?p.group+' · ':''}${p.size}</div>
+      <div class="out-sub">${fav?'자주 나감':p.code}</div>
+    </div>
+    <div class="${cls}" data-stock="${p.code}">${txt}</div>
+    <button class="btn-minus" onclick="quickOut('${p.code}')" ${p.stock===0?'disabled':''}>−1</button>
+  </div>`;
+}
+function renderOut(){
+  $('out-today').textContent=outTodayCount();
+  const kw=($('out-search').value||'').toLowerCase();
+  const list=$('out-list'),emp=$('out-empty');
+  if(!P.length){list.innerHTML='';emp.style.display='block';return;}
+  emp.style.display='none';
+  let html='';
+  if(!kw){
+    const fav=favCodes().map(c=>P.find(p=>p.code===c)).filter(Boolean);
+    if(fav.length){
+      html+=`<div class="group-card"><div class="group-head"><span>⭐ 자주 나가는 상품</span></div>
+      ${fav.map(p=>outRow(p,true)).join('')}</div>`;
+    }
+  }
+  const g=groups();
+  html+=Object.entries(g).map(([gn,items],gi)=>{
+    const f=kw?items.filter(p=>(gn+p.size+p.code).toLowerCase().includes(kw)):items;
+    if(!f.length)return'';
+    const open=kw?'block':'none', ar=kw?'▾':'▸';
+    return`<div class="group-card">
+      <div class="group-head" style="cursor:pointer" onclick="toggleGroup('og-${gi}',this)">
+        <span>${ar} ${gn}</span><span class="cnt">${f.reduce((s,p)=>s+p.stock,0)}개</span>
+      </div>
+      <div id="og-${gi}" style="display:${open}">${f.map(p=>outRow(p,false)).join('')}</div>
+    </div>`;
+  }).join('');
+  list.innerHTML=html;
+}
+function paintRow(p){
+  document.querySelectorAll('[data-stock="'+p.code+'"]').forEach(el=>{
+    el.className='out-stock'+(p.stock===0?' zero':(p.stock<=p.minStock?' low':''));
+    el.textContent=p.stock===0?'없음':p.stock+'개';
+  });
+  document.querySelectorAll('.out-row[data-code="'+p.code+'"] .btn-minus').forEach(b=>b.disabled=(p.stock===0));
+}
+function quickOut(code){
+  const i=P.findIndex(x=>x.code===code);
+  if(i===-1)return;
+  const p=P[i];
+  if(p.stock<=0){toast('재고가 없습니다',2200);navigator.vibrate&&navigator.vibrate([100,50,100]);return;}
+  P[i].stock-=1;
+  const entry={time:new Date().toLocaleString('ko-KR'),code:p.code,group:p.group,size:p.size,type:'출고',qty:1,stock:P[i].stock,memo:'빠른출고'};
+  L.unshift(entry);save();
+  outUndo.unshift({code:p.code,time:entry.time});outUndo=outUndo.slice(0,20);
+  navigator.vibrate&&navigator.vibrate(45);
+  // 같은 상품이 '자주 나감'과 그룹목록에 동시에 있을 수 있으므로 전부 갱신
+  paintRow(P[i]);
+  $('out-today').textContent=outTodayCount();
+  $('undo-bar').style.display='flex';
+  $('undo-info').innerHTML=`${p.group} · ${p.size} <span style="color:#b23c17">−1</span> → 남은 ${P[i].stock}개`;
+  if(GURL)sendLog(entry);
+}
+function undoOut(){
+  const u=outUndo.shift();
+  if(!u){$('undo-bar').style.display='none';return;}
+  const i=P.findIndex(x=>x.code===u.code);
+  if(i===-1)return;
+  P[i].stock+=1;
+  const li=L.findIndex(l=>l.time===u.time&&l.code===u.code&&l.type==='출고');
+  if(li>-1)L.splice(li,1);
+  save();paintRow(P[i]);$('out-today').textContent=outTodayCount();
+  toast('되돌렸습니다 → '+P[i].group+' '+P[i].size+' '+P[i].stock+'개');
+  if(outUndo.length){
+    const n=P.find(x=>x.code===outUndo[0].code);
+    if(n)$('undo-info').innerHTML=`${n.group} · ${n.size} <span style="color:#b23c17">−1</span> → 남은 ${n.stock}개`;
+  }else $('undo-bar').style.display='none';
+  if(GURL)syncToGoogle(true);
+}
+
+/* ═══════════ 재고 맞추기 (주 1회 실사) ═══════════ */
+function renderCount(){
+  const list=$('count-list');
+  if(!P.length){list.innerHTML='<div class="empty">등록된 상품이 없습니다.</div>';return;}
+  const g=groups();
+  list.innerHTML=Object.entries(g).map(([gn,items])=>
+    `<div class="group-card"><div class="group-head"><span>${gn}</span></div>`+
+    items.map(p=>`<div class="cnt-row" id="cr-${p.code}">
+      <div style="min-width:0;flex:1"><div class="out-name">${p.size}</div><div class="out-sub">앱 재고 ${p.stock}개</div></div>
+      <div class="cnt-gap" id="cg-${p.code}"></div>
+      <input class="cnt-in" type="number" inputmode="numeric" min="0" id="ci-${p.code}" oninput="calcCount()" placeholder="실제">
+    </div>`).join('')+`</div>`).join('');
+  calcCount();
+}
+function calcCount(){
+  let n=0;
+  P.forEach(p=>{
+    const el=$('ci-'+p.code);if(!el)return;
+    const v=el.value.trim();
+    const row=$('cr-'+p.code),gap=$('cg-'+p.code);
+    if(v===''){row.classList.remove('diff');gap.textContent='';return;}
+    const d=Number(v)-p.stock;
+    if(d===0){row.classList.remove('diff');gap.textContent='일치';gap.style.color='#0F6E56';}
+    else{row.classList.add('diff');gap.textContent=(d>0?'+':'')+d;gap.style.color='#b02a2a';n+=Math.abs(d);}
+  });
+  $('cnt-diff').textContent=n;
+}
+function applyCount(){
+  const ch=[];
+  P.forEach(p=>{
+    const el=$('ci-'+p.code);if(!el)return;
+    const v=el.value.trim();if(v==='')return;
+    const real=Number(v);if(isNaN(real)||real<0)return;
+    if(real!==p.stock)ch.push({code:p.code,from:p.stock,to:real});
+  });
+  if(!ch.length){toast('차이가 있는 항목이 없습니다');return;}
+  if(!confirm(ch.length+'개 품목의 재고를 실제 개수로 맞춥니다.\n\n계속할까요?\n(현재 상태는 백업에 저장됩니다)'))return;
+  backup('재고 맞추기 직전');
+  ch.forEach(c=>{
+    const i=P.findIndex(x=>x.code===c.code);
+    P[i].stock=c.to;
+    const d=c.to-c.from;
+    const entry={time:new Date().toLocaleString('ko-KR'),code:P[i].code,group:P[i].group,size:P[i].size,
+      type:d>0?'입고':'출고',qty:Math.abs(d),stock:c.to,memo:'재고 맞추기 ('+c.from+'→'+c.to+')'};
+    L.unshift(entry);
+    if(GURL)sendLog(entry);
+  });
+  save();
+  toast(ch.length+'개 품목을 맞췄습니다');
+  if(GURL)syncToGoogle(true);
+  go('stock',null);document.querySelectorAll('.nav-item')[2].classList.add('active');
 }
 
 /* ═══════════ 재고 ═══════════ */
@@ -826,8 +1027,8 @@ async function pullFromGoogle(){
       backup('불러오기 직전');
       P=incoming;save();renderStock();toast('불러오기 완료 — '+P.length+'개 품목');
     }
-    else toast('불러오기 실패');
-  }catch(e){toast('불러오기 실패 — 인터넷 연결 확인');}
+    else toast('불러오기 실패 — 시트 응답: '+(d&&d.error?d.error:JSON.stringify(d).slice(0,80)),5000);
+  }catch(e){toast('불러오기 실패 — '+(e&&e.message?e.message:'인터넷 연결 확인'),5000);}
 }
 
 /* ═══════════ CSV ═══════════ */
@@ -854,6 +1055,7 @@ function exportCSV(kind){
 
 /* 시작 */
 syncBadge();
+renderOut();
 </script>
 </body>
 </html>
